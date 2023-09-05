@@ -6,7 +6,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,11 +13,9 @@ import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.OutlinedButton
@@ -26,8 +23,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -48,6 +48,8 @@ import androidx.navigation.NavController
 import codes.andreirozov.bottombaranimation.ui.theme.Blue500
 import codes.andreirozov.bottombaranimation.ui.theme.Grey900
 import com.example.moviesapp.R
+import com.example.moviesapp.screen.homeScreen.component.NotConnected
+import com.example.moviesapp.screen.mainScreen.Main.checkNetworkConnectivity
 import com.example.myapplication.model.NavigationItem
 import com.facebook.CallbackManager
 import com.facebook.FacebookCallback
@@ -68,6 +70,8 @@ fun SignInScreen(
 
 ) {
     val context = LocalContext.current
+    var isConnected by remember{ mutableStateOf(checkNetworkConnectivity(context))}
+
     LaunchedEffect(key1 = state.signInError) {
         state.signInError?.let { error ->
             Toast.makeText(
@@ -113,159 +117,170 @@ fun SignInScreen(
         }
     }
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-        modifier = Modifier
-            .fillMaxSize()
-            .drawBehind {
-                val colorFrom = Color.DarkGray
-                val colorTo = Grey900.copy(alpha = 0.5f)
-                val gradient = Brush.verticalGradient(
-                    0f to colorFrom,
-                    size.height to colorTo
-                )
-                drawRect(brush = gradient)
-            }
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .absolutePadding(top = 10.dp, left = 5.dp, right = 8.dp)
-        )
-        {
-            Text(
-                text = coloredText,
-                fontSize = 34.sp,
-                fontStyle = FontStyle.Normal,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = "Để sau",
-                textAlign = TextAlign.Right,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF949699),
-                modifier = Modifier
-                    .absolutePadding(right = 2.dp)
-                    .clickable {
-                        navController.popBackStack()
-                    }
-            )
-        }
-        Text(
-            text = "Đăng nhập/Đăng ký",
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp,
-            color = Color.White,
-            modifier = Modifier.absolutePadding(left = 3.dp)
-        )
-        Spacer(modifier = Modifier.absolutePadding(bottom = 10.dp))
-
-
+    if(isConnected) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedButton(
-                onClick = onSignInGoogleClick,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = Color.White,
-                    contentColor = Color.Black
-                ),
-                modifier = Modifier
-                    .width(265.dp)
-                    .height(36.dp)
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.google),
-                        contentDescription = null,
-                        modifier = Modifier.size(33.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .drawBehind {
+                    val colorFrom = Color.DarkGray
+                    val colorTo = Grey900.copy(alpha = 0.5f)
+                    val gradient = Brush.verticalGradient(
+                        0f to colorFrom,
+                        size.height to colorTo
                     )
-                    Spacer(modifier = Modifier.absolutePadding(left = 13.dp))
-                    Text(
-                        text = "Tiếp tục với Google",
-                        color = Color.Black,
-                        textAlign = TextAlign.Left,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    drawRect(brush = gradient)
                 }
-            }
-            FacebookButton(onAuthComplete = { navController.navigate(NavigationItem.User.route)}, onAuthError = {} )
-            Spacer(modifier = Modifier.absolutePadding(bottom = 12.dp))
-
+        ) {
             Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Divider(
-                    modifier = Modifier.width(120.dp),
-                    thickness = 1.dp,
-                    color = Color(0xFFA2A3A3)
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .absolutePadding(top = 10.dp, left = 5.dp, right = 8.dp)
+            )
+            {
+                Text(
+                    text = coloredText,
+                    fontSize = 34.sp,
+                    fontStyle = FontStyle.Normal,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f),
                 )
                 Text(
-                    text = "Hoặc",
-                    color = Color(0xFFA2A3A3),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal,
-                    modifier = Modifier.absolutePadding(left = 5.dp, right = 5.dp)
-                )
-                Divider(
-                    modifier = Modifier.width(120.dp),
-                    thickness = 1.dp,
-                    color = Color(0xFFA2A3A3)
+                    text = "Để sau",
+                    textAlign = TextAlign.Right,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF949699),
+                    modifier = Modifier
+                        .absolutePadding(right = 2.dp)
+                        .clickable {
+                            navController.popBackStack()
+                        }
                 )
             }
-            Spacer(modifier = Modifier.absolutePadding(bottom = 12.dp))
+            Text(
+                text = "Đăng nhập/Đăng ký",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = Color.White,
+                modifier = Modifier.absolutePadding(left = 3.dp)
+            )
+            Spacer(modifier = Modifier.absolutePadding(bottom = 10.dp))
 
-            OutlinedButton(
-                onClick = { /*TODO*/ },
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color.Black,
-                    containerColor = Color.White
-                ),
-                modifier = Modifier
-                    .width(265.dp)
-                    .height(36.dp)
 
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Dùng số điên thoại của bạn",
-                        color = Color.Black,
-                        textAlign = TextAlign.Justify,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .width(260.dp)
-                    .wrapContentHeight()
-                    .absolutePadding(top = 5.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = dieuKhoan,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    fontSize = 14.sp)
+                OutlinedButton(
+                    onClick = onSignInGoogleClick,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color.White,
+                        contentColor = Color.Black
+                    ),
+                    modifier = Modifier
+                        .width(265.dp)
+                        .height(36.dp)
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.google),
+                            contentDescription = null,
+                            modifier = Modifier.size(33.dp)
+                        )
+                        Spacer(modifier = Modifier.absolutePadding(left = 13.dp))
+                        Text(
+                            text = "Tiếp tục với Google",
+                            color = Color.Black,
+                            textAlign = TextAlign.Left,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                FacebookButton(
+                    onAuthComplete = { navController.navigate(NavigationItem.User.route) },
+                    onAuthError = {})
+                Spacer(modifier = Modifier.absolutePadding(bottom = 12.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Divider(
+                        modifier = Modifier.width(120.dp),
+                        thickness = 1.dp,
+                        color = Color(0xFFA2A3A3)
+                    )
+                    Text(
+                        text = "Hoặc",
+                        color = Color(0xFFA2A3A3),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Normal,
+                        modifier = Modifier.absolutePadding(left = 5.dp, right = 5.dp)
+                    )
+                    Divider(
+                        modifier = Modifier.width(120.dp),
+                        thickness = 1.dp,
+                        color = Color(0xFFA2A3A3)
+                    )
+                }
+                Spacer(modifier = Modifier.absolutePadding(bottom = 12.dp))
+
+                OutlinedButton(
+                    onClick = { /*TODO*/ },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color.Black,
+                        containerColor = Color.White
+                    ),
+                    modifier = Modifier
+                        .width(265.dp)
+                        .height(36.dp)
+
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Dùng số điên thoại của bạn",
+                            color = Color.Black,
+                            textAlign = TextAlign.Justify,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .width(260.dp)
+                        .wrapContentHeight()
+                        .absolutePadding(top = 5.dp)
+                ) {
+                    Text(
+                        text = dieuKhoan,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        fontSize = 14.sp
+                    )
+                }
             }
+        }
+    } else {
+        NotConnected {
+            isConnected = checkNetworkConnectivity(context)
+            if(isConnected)
+                Toast.makeText(context, "Đã khôi phục kết nối", Toast.LENGTH_SHORT).show()
         }
     }
 }
@@ -276,7 +291,7 @@ fun FacebookButton(
     onAuthError: (Exception) -> Unit,
     modifier: Modifier = Modifier,
 
-) {
+    ) {
     val scope = rememberCoroutineScope()
     val loginManager = LoginManager.getInstance()
     val callbackManager = remember { CallbackManager.Factory.create() }
@@ -288,11 +303,15 @@ fun FacebookButton(
     DisposableEffect(Unit) {
         loginManager.registerCallback(callbackManager, object : FacebookCallback<LoginResult> {
             override fun onCancel() {
+                Log.d("XXX","1")
+
 
             }
 
             override fun onError(error: FacebookException) {
                 onAuthError(error)
+                Log.d("XXX",error.message.toString())
+
             }
 
             override fun onSuccess(result: LoginResult) {
@@ -301,8 +320,12 @@ fun FacebookButton(
                     val credential = FacebookAuthProvider.getCredential(token)
                     val authResult = Firebase.auth.signInWithCredential(credential).await()
                     if (authResult.user != null) {
+                        Log.d("XXX",authResult.user?.displayName.toString())
+
                         onAuthComplete()
                     } else {
+                        Log.d("XXX","asdasdasd")
+
                         onAuthError(IllegalStateException("Unable to sign in with Facebook"))
                     }
                 }
@@ -310,6 +333,8 @@ fun FacebookButton(
         })
 
         onDispose {
+            Log.d("XXX","5z")
+
             loginManager.unregisterCallback(callbackManager)
         }
     }
@@ -332,7 +357,7 @@ fun FacebookButton(
             modifier = Modifier.fillMaxWidth()
         ) {
             Image(
-                painter = painterResource(id = R.drawable.facebook),
+                painter = painterResource(id = R.drawable.icfacebook),
                 contentDescription = null,
                 modifier = Modifier.size(33.dp)
             )

@@ -15,6 +15,7 @@ import java.util.Date
 
 @Parcelize
 data class Movie(
+    var id: String? = null,
     val name: String? = null,
     val description: String? = null,
     val image: String? = null,
@@ -48,7 +49,6 @@ data class Movie(
 
 
 }
-
 
 class MoviesNavType : NavType<Movie>(isNullableAllowed = true) {
     override fun get(bundle: Bundle, key: String): Movie? {

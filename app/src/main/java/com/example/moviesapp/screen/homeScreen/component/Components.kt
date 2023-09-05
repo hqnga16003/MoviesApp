@@ -1,5 +1,8 @@
 package com.example.moviesapp.screen.homeScreen.component
 
+import android.os.Looper
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,15 +22,20 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,20 +57,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
+import codes.andreirozov.bottombaranimation.ui.theme.fontFamilyBody
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.moviesapp.R
 import com.example.moviesapp.model.Movie
-import com.example.moviesapp.screen.homeScreen.component.StyleStatic.blurTextWhiteColor
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
+import kotlinx.coroutines.delay
 import java.util.Calendar
+import java.util.logging.Handler
+import androidx.compose.runtime.LaunchedEffect as LaunchedEffect
 
 @Composable
 fun IconDetail(
     icon: ImageVector,
     description: String,
+    onClick: () -> Unit,
     colorIcon: Color = StyleStatic.primaryTextColor,
     colorText: Color = StyleStatic.primaryTextColor,
     modifier: Modifier = Modifier
@@ -77,7 +89,11 @@ fun IconDetail(
             contentDescription = description,
             modifier = Modifier
                 .size(30.dp)
-                .clip(RoundedCornerShape(percent = 50)),
+                .clip(RoundedCornerShape(percent = 50))
+                .clickable {
+                    onClick()
+                }
+            ,
             tint = colorIcon,
         )
         Text(
@@ -164,10 +180,13 @@ fun ButtonPlay(
 
 
 @Composable
-fun FilmSeeMore() {
+fun FilmSeeMore(navController: NavController,title:String) {
     Box(
         modifier = StyleStatic.modifierFilmInListSize
-            .background(colorResource(id = R.color.dark), RoundedCornerShape(6.dp)),
+            .background(colorResource(id = R.color.dark), RoundedCornerShape(6.dp))
+            .clickable {
+                navController.navigate("allmovies/" + title)
+            },
         contentAlignment = Alignment.Center
     ) {
         Image(
@@ -228,6 +247,25 @@ fun FilmInList(
     )
 }
 
+@Composable
+fun FilmInFavourite(
+    imageUrl: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    AsyncImage(
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(imageUrl)
+            .crossfade(true)
+            .build(),
+        contentDescription = null,
+        modifier = modifier
+            .clip(RoundedCornerShape(6.dp))
+            .clickable { onClick() },
+        contentScale = ContentScale.Crop
+    )
+}
+
 
 
 @Composable
@@ -250,9 +288,11 @@ fun InfoCategoryFilm(
                 modifier = Modifier.width(70.dp)
             )
         }
-        items(infomation) { it ->
+        items(infomation) {
+            val cate = if (it.equals(infomation[infomation.size - 1])) "$it." else "$it, "
+
             Text(
-                text = it + ", ",
+                text = cate,
                 style = StyleStatic.textCommonStyle.copy(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -379,9 +419,12 @@ fun ItemMovieTop5(
 fun ItemPoster(
     imageUrl: String,
     heightImg: Dp,
-    navController: NavController,
+    isFavourite: Boolean,
     onClick: () -> Unit
 ) {
+    var liked by remember { mutableStateOf(isFavourite) }
+    var colorLikeIcon =
+        if (liked) colorResource(id = R.color.tym) else StyleStatic.primaryTextColor
     Box(
         contentAlignment = Alignment.BottomCenter
     ) {
@@ -393,6 +436,7 @@ fun ItemPoster(
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
+                .height(heightImg)
                 .clickable { onClick() },
             contentScale = ContentScale.Crop
         )
@@ -417,16 +461,16 @@ fun ItemPoster(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconDetail(
-                Icons.Outlined.FavoriteBorder,
-                "Thêm vào DS",
-                modifier = Modifier
-                    .clickable {
-                    }
+                icon = if(liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                description = "Yêu thích",
+                colorIcon = colorLikeIcon,
+                onClick = {
+                    liked = !liked
+                }
             )
             ButtonPlay(
-                onClick = {
-                    onClick()
-                }, fSize = 14,
+                onClick = onClick
+                , fSize = 14,
                 modifier = Modifier
                     .weight(5f)
                     .padding(horizontal = 8.dp)
@@ -434,10 +478,7 @@ fun ItemPoster(
             IconDetail(
                 Icons.Outlined.Info,
                 "Chi tiết",
-                modifier = Modifier
-                    .clickable {
-                        onClick()
-                    }
+                   onClick = onClick
             )
         }
     }
@@ -458,19 +499,78 @@ fun InfoSpaceDot(
    }
 }
 
-//@Composable
-//fun YoutubeTrailer(trailerUrl: String) {
-//    AndroidView(
-//        modifier = Modifier.fillMaxWidth()
-//            .height(360.dp),
-//        factory = {context ->
-//            WebView(context).apply {
-//                settings.javaScriptEnabled = true
-//                webViewClient = WebViewClient()
-//                loadUrl(trailerUrl)
-//            }
-//    })
-//}
+@Composable
+fun BackAppToast() {
+    var shouldShowToast by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    BackHandler {
+        if (shouldShowToast) {
+            Toast.makeText(context, "Ứng dụng sẽ thoát khi bạn nhấn lại một lần nữa", Toast.LENGTH_SHORT).show()
+        } else {
+            shouldShowToast = true
+
+        }
+    }
+}
+
+@Composable
+fun NotConnected (
+    onReConnect: () -> Unit
+)
+{
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colorResource(id = R.color.black)),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.notconnected),
+            contentDescription = "Không có kết nối mạng",
+            modifier = Modifier
+                .width(180.dp),
+            contentScale = ContentScale.Crop
+        )
+        Text(
+            text = "Lỗi kết nối",
+            style = TextStyle(
+                fontFamily = fontFamilyBody,
+                color = colorResource(id = R.color.whiteBlur),
+                fontSize = 26.sp
+            )
+        )
+        Text(
+            text = "Vui lòng kết nối mạng để tiếp tục",
+            style = TextStyle(
+                fontFamily = fontFamilyBody,
+                color = Color.White,
+                fontSize = 16.sp
+            )
+        )
+        Button(
+            onClick = {
+                onReConnect()
+            },
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = Color(0xFF39B7E8),
+                contentColor = Color.White
+            ),
+            modifier = Modifier
+                .width(180.dp)
+                .padding(top = 18.dp)
+        )
+        {
+            Text(
+                text = "Thử lại",
+                textAlign = TextAlign.Justify,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
 
 @Composable
 fun YoutubeTrailer(

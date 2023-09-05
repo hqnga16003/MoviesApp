@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,15 +41,18 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
 import com.example.moviesapp.R
 import com.example.moviesapp.model.Movie
 import com.example.moviesapp.model.MovieBookNavigation
 import com.example.moviesapp.screen.homeScreen.component.StyleStatic.textCommonStyle
 import com.example.myapplication.screen.PlayMovieScreen.PlayMovieViewModel
+import com.example.myapplication.screen.PlayMovieScreen.VideoDetailAction
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.rememberPagerState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @SuppressLint("StateFlowValueCalledInComposition")
@@ -56,31 +60,30 @@ import kotlinx.coroutines.launch
 @Composable
 fun Carousel(
     movies: List<Movie>,
+    movieFavourites: List<Movie>,
     navController: NavController,
 ) {
 
     val pagerState = rememberPagerState()
     var scope = rememberCoroutineScope()
-    var liked by remember { mutableStateOf(false) }
     val configuration = LocalConfiguration.current
-
-    // Chiều cao sẽ bằng 70% kích thước màn hình
     val screenHeight = configuration.screenHeightDp.dp
     val height = screenHeight * 0.8f
-
-    // Chiều cao của ảnh
     val imageHeight = height - 80.dp
 
-    var colorLikeIcon =
-        if (liked) colorResource(id = R.color.tym) else StyleStatic.primaryTextColor
-//    LaunchedEffect(Unit) {
-//        while (true) {
-//            delay(4000)
-//            scope.launch {
-//                pagerState.animateScrollToPage(pagerState.currentPage + 1)
-//            }
-//        }
-//    }
+    var currentPage by remember { mutableStateOf(0) }
+
+    LaunchedEffect(currentPage) {
+        while(true) {
+            delay(4000)
+            currentPage = (currentPage + 1) % movies.size
+
+            scope.launch {
+                pagerState.animateScrollToPage(currentPage)
+            }
+        }
+    }
+
     Column() {
         HorizontalPager(
             count = movies.size,
@@ -88,12 +91,15 @@ fun Carousel(
             modifier = Modifier.height(height),
             verticalAlignment = Alignment.Top
         ) { page ->
+            val isFavourite = movies[page]?.id?.let { movieId ->
+                movieFavourites.any { it.id == movieId }
+            } ?: false
+
             ItemPoster(
                 imageUrl = movies[page].image.toString(),
                 heightImg = imageHeight,
-                navController,
+                isFavourite,
                 onClick = {
-
                     navController.navigate(MovieBookNavigation.createRoute(movie = movies[page]))
                 })
         }
@@ -125,19 +131,18 @@ fun Carousel(
     }
 }
 
-
+@UnstableApi
 @OptIn(ExperimentalPagerApi::class)
 @Composable
 fun CarouselListFilms(
     movie: Movie,
     navController: NavController,
     movies: List<Movie>,
-    viewModel: PlayMovieViewModel,
+    viewModel: PlayMovieViewModel
 ) {
     val listTags = listOf("Phim liên quan", "Trailer")
     val pagerState = rememberPagerState(initialPage = 0)
     var scope = rememberCoroutineScope()
-
     val styleActive = textCommonStyle.copy(fontWeight = FontWeight.Bold, fontSize = 17.sp)
 
     Column() {
@@ -221,7 +226,7 @@ fun ListFilmHorizontal(
     navController: NavController,
 ) {
     Column(modifier = Modifier.padding(15.dp)) {
-        TitleRowViewMovie(categoryFilms)
+        TitleRowViewMovie(categoryFilms,navController)
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -231,14 +236,14 @@ fun ListFilmHorizontal(
                 })
             }
             item {
-                FilmSeeMore()
+                FilmSeeMore(navController, title = categoryFilms)
             }
         }
     }
 }
 
 @Composable
-fun TitleRowViewMovie(title: String) {
+fun TitleRowViewMovie(title: String,navController: NavController) {
     Row(
         modifier = Modifier
             .fillMaxWidth(),
@@ -246,7 +251,7 @@ fun TitleRowViewMovie(title: String) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = title,
+            text = "Phim $title",
             style = StyleStatic.textCommonStyle.copy(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium
@@ -255,7 +260,10 @@ fun TitleRowViewMovie(title: String) {
         Icon(
             imageVector = Icons.Default.KeyboardArrowRight,
             contentDescription = "Xem tất cả",
-            tint = StyleStatic.primaryTextColor
+            tint = StyleStatic.primaryTextColor,
+            modifier = Modifier.clickable {
+                navController.navigate("allmovies/"+title)
+            }
         )
     }
 }
@@ -286,19 +294,19 @@ fun ListFilmTop5(
     }
 }
 
-
+@UnstableApi
 @Composable
 fun RelatedMovies(
     movies: List<Movie>,
     navController: NavController,
-    viewModel: PlayMovieViewModel,
+    viewModel: PlayMovieViewModel
 ) {
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
         for (film in movies) {
             ItemRelatedFilm(film, onClick = {
-                viewModel.stopVideo()
+                viewModel.handleAction(VideoDetailAction.StopVideo)
                 navController.navigate(MovieBookNavigation.createRoute(movie = film))
 
             })

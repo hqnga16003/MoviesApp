@@ -1,7 +1,7 @@
 package com.example.movieapp.screen.searchScreen
 
 import android.annotation.SuppressLint
-import android.util.Log
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,8 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -56,11 +54,12 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.moviesapp.R
 import com.example.moviesapp.model.CategoryMovie
 import com.example.moviesapp.model.CategoryMovieBookNavigation
 import com.example.moviesapp.model.Movie
 import com.example.moviesapp.model.MovieBookNavigation
+import com.example.moviesapp.screen.homeScreen.component.NotConnected
+import com.example.moviesapp.screen.mainScreen.Main.checkNetworkConnectivity
 import com.example.moviesapp.screen.searchScreen.SearchSreenViewModel
 import com.example.myapplication.screen.mainScreen.MainViewModel
 import com.example.petadoption.bottomnav.BottomBar
@@ -70,18 +69,22 @@ import com.example.petadoption.bottomnav.BottomBar
 fun SearchScreen(
     mainViewModel: MainViewModel,
     navController: NavController,
-    movies: List<Movie>
+    movies: List<Movie>,
 ) {
-
     var boolean by remember {
         mutableStateOf(true)
     }
 
     val searchSreenViewModel: SearchSreenViewModel = hiltViewModel()
     val categoriesState = searchSreenViewModel.categories.collectAsState()
+
+    val context = LocalContext.current
+    var isConnected by remember { mutableStateOf(checkNetworkConnectivity(context)) }
+
     Scaffold(
         topBar = {
-            SearchBarView(movies, searchSreenViewModel)
+            if (isConnected)
+                SearchBarView(movies, navController)
         },
         bottomBar = {
             BottomBar(
@@ -91,44 +94,51 @@ fun SearchScreen(
             )
         },
     ) { paddingValues ->
-        LazyVerticalGrid(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-                .padding(paddingValues),
-            columns = GridCells.Fixed(2),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 24.dp)
-        ) {
-            items(if (boolean) categoriesState.value.sortedBy { it.name }
-                .take(6) else categoriesState.value.sortedBy { it.name }) { it ->
-                ItemCategoryView(it) {
-                    navController.navigate(CategoryMovieBookNavigation.createRoute(it))
+        if (isConnected) {
+            LazyVerticalGrid(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .padding(paddingValues),
+                columns = GridCells.Fixed(2),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 24.dp)
+            ) {
+                items(if (boolean) categoriesState.value.sortedBy { it.name }
+                    .take(6) else categoriesState.value.sortedBy { it.name }) { it ->
+                    ItemCategoryView(it) {
+                        navController.navigate(CategoryMovieBookNavigation.createRoute(it))
+                    }
+                }
+
+                item(span = { GridItemSpan(2) }) {
+                    ButtonExpandCollapse(boolean = boolean) {
+                        boolean = !boolean
+                    }
+                }
+                item(span = { GridItemSpan(2) }) {
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = "Có thể bạn quan tâm",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White, textAlign = TextAlign.Start
+                    )
+                }
+                items(movies.sortedByDescending { it.view ?: 0 }.take(36)) { it ->
+
+                    ItemMovieView(it) {
+                        navController.navigate(MovieBookNavigation.createRoute(it))
+
+                    }
                 }
             }
-
-            item(span = { GridItemSpan(2) }) {
-                ButtonExpandCollapse(boolean = boolean) {
-                    boolean = !boolean
-                }
-            }
-            item(span = { GridItemSpan(2) }) {
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = "Có thể bạn quan tâm",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White, textAlign = TextAlign.Start
-                )
-            }
-            items(movies.sortedByDescending { it.view ?: 0 }.take(36)) { it ->
-
-                ItemMovieView(it) {
-                    navController.navigate(MovieBookNavigation.createRoute(it))
-
-
-                }
+        } else {
+            NotConnected {
+                isConnected = checkNetworkConnectivity(context)
+                if (isConnected)
+                    Toast.makeText(context, "Đã khôi phục kết nối", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -137,7 +147,7 @@ fun SearchScreen(
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchBarView(movies: List<Movie>, searchSreenViewModel: SearchSreenViewModel) {
+fun SearchBarView(movies: List<Movie>, navController: NavController) {
     var text by remember { mutableStateOf("") }
     var active by remember { mutableStateOf(false) }
     var items = remember {
@@ -158,12 +168,8 @@ fun SearchBarView(movies: List<Movie>, searchSreenViewModel: SearchSreenViewMode
             query = text,
             onQueryChange = { text = it },
             onSearch = {
-
                 items.add(text)
-
-                text = ""
-
-
+                // navController.navigate("movieQuery/" + text)
             },
             active = active,
             onActiveChange = { active = it },
@@ -194,29 +200,29 @@ fun SearchBarView(movies: List<Movie>, searchSreenViewModel: SearchSreenViewMode
             ),
             tonalElevation = 100.dp,
         ) {
-            Column() {
-                Text(
-                    text = "Lịch Sử tìm kiếm", style = TextStyle(
-                        color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp
-                    )
-                )
-                items.forEach {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(all = 14.dp)
-                            .clickable { text = it }) {
-                        Icon(
-                            modifier = Modifier.padding(end = 10.dp),
-                            painter = painterResource(id = R.drawable.baseline_history_24),
-                            contentDescription = null,
-                            tint = Color.White
-                        )
-                        Text(text = it, color = Color.White)
+             if (text.isEmpty()) {
+                Text(text = "")
+            } else {
+                LazyVerticalGrid(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                        .padding(),
+                    columns = GridCells.Fixed(2),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 24.dp)
+                ) {
+                    items(movies.filter { movie ->
+                        movie.name.toString().contains(text, true)
+                    }) { it ->
+                        ItemMovieView(it) {
+                            navController.navigate(MovieBookNavigation.createRoute(movie = it))
+                        }
                     }
                 }
-                
             }
+
         }
     }
 }
